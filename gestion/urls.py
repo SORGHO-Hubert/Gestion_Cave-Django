@@ -36,7 +36,7 @@ urlpatterns = [
     path('exporter/pdf/', views.exporter_pdf, name='exporter_pdf'),
 
     # Historique et Notifications
-    path('historique/', views.historique_stock, name='historique_stock'),
+    #path('historique/', views.historique_stock, name='historique_stock'),
     path('notifications/', views.liste_notifications, name='liste_notifications'),
     path('notifications/supprimer/<int:notif_id>/', views.supprimer_notification, name='supprimer_notification'),
     path('notifications/marquer-lu/<int:notif_id>/', views.marquer_notification_lue, name='marquer_notification_lue'),
@@ -45,7 +45,11 @@ urlpatterns = [
     path('rapports/ventes/', views.rapport_ventes, name='rapport_ventes'),
     path('produits/', views.liste_produits, name='liste_produits'),
     path('produits/export/csv/', views.exporter_csv, name='exporter_csv'),
-    path('valider-vente/', views.valider_vente, name='valider_vente'),
+    #path('valider-vente/', views.valider_vente, name='valider_vente'),
     path('recu/<int:vente_id>/', views.succes_vente, name='recu_vente'),
+    # CHERCHE CES LIGNES ET MODIFIE-LES COMME CECI :
+    path('valider-vente/', views.valider_vente, name='valider_vente'),  # Simplifié pour le JS
+    path('historique-ventes/', views.historique_ventes, name='historique_ventes'),
+
 
 ]

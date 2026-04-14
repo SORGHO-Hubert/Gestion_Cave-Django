@@ -119,6 +119,12 @@
                 <i class="fas fa-plus-circle me-2"></i> Ajouter Produit
             </a>
             {% endif %}
+            <a href="{% url 'historique_ventes' %}" class="nav-link {% if request.resolver_match.url_name == 'historique_ventes' %}active{% endif %}">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-history me-2"></i>
+                        <span>Historique Ventes</span>
+                </div>
+            </a>
 
             <hr class="mx-3 opacity-25">
             <div class="px-4 small text-muted mb-2">

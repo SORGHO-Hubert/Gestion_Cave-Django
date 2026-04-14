@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
+<style>
+    /* Ajoute l'animation ici */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Il faut aussi dire au tableau d'utiliser cette animation */
+    #corps-panier tr {
+        animation: fadeIn 0.4s ease-out;
+    }
+</style>
 <div class="container-fluid px-4 py-4" style="background-color: #f4f7f6;">
     <div class="row g-4">
         <div class="col-lg-4">
@@ -26,8 +38,8 @@
                         <label class="small fw-bold text-muted">QUANTITÉ</label>
                         <input type="number" id="input-qte" class="form-control border-0 bg-light" value="1" min="1">
                     </div>
-                    <button type="button" onclick="ajouterAuPanier()" class="btn w-100 py-2 fw-bold" style="background: #12939a; color: white; border-radius: 10px;">
-                        AJOUTER AU TICKET
+                    <button type="button" onclick="ajouterAuPanier()" class="btn btn-info text-white w-100 fw-bold py-3 shadow-sm">
+                        <i class="fas fa-plus-circle"></i> AJOUTER AU TICKET
                     </button>
                 </div>
             </div>
@@ -75,58 +87,92 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+// Initialisation du panier au chargement de la page
 let panier = [];
 
-// Fonction pour ajouter au tableau (Ticket)
 function ajouterAuPanier() {
-    const select = document.getElementById('select-produit');
+    const produitSelect = document.getElementById('select-produit');
     const qteInput = document.getElementById('input-qte');
+    const corpsTableau = document.getElementById('corps-panier');
 
-    if (!select.value) {
-        alert("Veuillez choisir un produit");
+    // Alerte si aucun produit n'est sélectionné
+    if (!produitSelect.value) {
+        Swal.fire({
+            title: 'Attention !',
+            text: 'Choisissez un produit avant de l\'ajouter.',
+            icon: 'warning',
+            confirmButtonColor: '#1a252f'
+        });
         return;
     }
 
-    const item = {
-        id: select.value,
-        nom: select.options[select.selectedIndex].text.split('(')[0].trim(),
-        prix: parseFloat(select.options[select.selectedIndex].getAttribute('data-prix')),
-        qte: parseInt(qteInput.value)
-    };
-    item.total = item.prix * item.qte;
+    const option = produitSelect.options[produitSelect.selectedIndex];
+    const prix = parseFloat(option.getAttribute('data-prix'));
+    const nom = option.text.split('(')[0].trim();
+    const qte = parseInt(qteInput.value);
 
-    panier.push(item);
+    // Validation de la quantité
+    if (qte <= 0 || isNaN(qte)) {
+        Swal.fire('Erreur', 'Veuillez entrer une quantité valide.', 'error');
+        return;
+    }
 
-    // Mise à jour visuelle du tableau
-    const corps = document.getElementById('corps-panier');
+    const totalLigne = prix * qte;
+
+    // 1. Ajout à l'objet panier (Données)
+    panier.push({
+        id: produitSelect.value,
+        nom: nom,
+        prix: prix,
+        qte: qte,
+        total: totalLigne
+    });
+
+    // 2. Mise à jour visuelle (Tableau HTML)
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td class="fw-bold">${item.nom}</td>
-        <td>${item.prix} FCFA</td>
-        <td class="text-center">${item.qte}</td>
-        <td class="fw-bold text-info">${item.total} FCFA</td>
-        <td class="text-end"><button class="btn btn-sm text-danger" onclick="this.parentElement.parentElement.remove()"><i class="fas fa-trash"></i></button></td>
+        <td class="fw-bold">${nom}</td>
+        <td>${prix} FCFA</td>
+        <td class="text-center">${qte}</td>
+        <td class="fw-bold text-info">${totalLigne} FCFA</td>
+        <td class="text-end">
+            <button type="button" class="btn btn-sm text-danger" onclick="supprimerLigne(this, ${panier.length - 1})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
     `;
-    corps.appendChild(tr);
+    corpsTableau.appendChild(tr);
 
-    // Mise à jour du total général
-    let totalG = 0;
-    panier.forEach(i => totalG += i.total);
-    document.getElementById('total-final').innerText = totalG;
+    // 3. Mise à jour du prix total affiché
+    majTotal();
 }
 
-// LA FONCTION QUI FAIT LA REDIRECTION
+function majTotal() {
+    let totalGlobal = 0;
+    panier.forEach(item => totalGlobal += item.total);
+    document.getElementById('total-final').innerText = totalGlobal;
+}
+
+function supprimerLigne(btn, index) {
+    // Supprime du panier et du tableau
+    panier.splice(index, 1);
+    btn.closest('tr').remove();
+    majTotal();
+}
+
 function validerVente() {
-    console.log("Bouton cliqué !"); // Vérifie ça dans la console (F12)
+    const client = document.getElementById('nom_client').value || "Client passage";
 
-    const client = document.getElementById('nom_client').value;
-    if (panier.length === 0) { alert("Le panier est vide !"); return; }
-    if (!client) { alert("Entrez le nom du client !"); return; }
+    if (panier.length === 0) {
+        Swal.fire('Ticket vide', 'Ajoutez au moins un produit avant de valider.', 'error');
+        return;
+    }
 
-    // Récupération du token de sécurité Django
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
+    // Envoi des données vers Django
     fetch('/valider-vente/', {
         method: 'POST',
         headers: {
@@ -141,15 +187,32 @@ function validerVente() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // REDIRECTION VERS LE REÇU
-            window.location.href = "/recu/" + data.vente_id + "/";
+            Swal.fire({
+                title: 'Vente réussie !',
+                text: 'Voulez-vous voir et télécharger le reçu ?',
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonColor: '#1a252f',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Voir le reçu',
+                cancelButtonText: 'Plus tard'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // REDIRECTION VERS LA PAGE DE REÇU (recu_vente.html)
+                    // Utilise l'ID renvoyé par la vue Django
+                    window.location.href = "/recu/" + data.vente_id + "/";
+                } else {
+                    // Si l'utilisateur annule, on va simplement à l'historique
+                    window.location.href = "/historique/";
+                }
+            });
         } else {
-            alert("Erreur serveur : " + data.message);
+            Swal.fire('Erreur', data.message, 'error');
         }
     })
     .catch(error => {
-        console.error("Erreur Fetch:", error);
-        alert("Impossible de joindre le serveur. Vérifiez l'URL dans urls.py.");
+        console.error('Erreur:', error);
+        Swal.fire('Erreur Système', 'Impossible de contacter le serveur', 'error');
     });
 }
 </script>

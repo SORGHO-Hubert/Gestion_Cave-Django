@@ -31,18 +31,13 @@ class Produit(models.Model):
 # --- NOUVELLE STRUCTURE DE VENTE (Multi-Produits) ---
 
 class Vente(models.Model):
-    """ Représente le ticket de caisse global """
-    nom_client = models.CharField(max_length=100, default="Client Anonyme")
+    nom_client = models.CharField(max_length=100)
     date_vente = models.DateTimeField(auto_now_add=True)
-    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    # Le total sera calculé automatiquement par la somme des lignes
+    utilisateur = models.ForeignKey(User, on_delete=models.CASCADE)
     total_general = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
-        return f"Vente #{self.id} - {self.nom_client} ({self.date_vente.strftime('%d/%m/%Y')})"
-
-    class Meta:
-        ordering = ['-date_vente']
+        return f"Vente {self.id} - {self.nom_client}"
 
 class LigneVente(models.Model):
     """ Représente chaque produit à l'intérieur d'une vente """

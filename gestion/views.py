@@ -6,8 +6,6 @@ from django.contrib.auth import authenticate
 from django.db.models import F, Sum
 from io import BytesIO
 
-# Imports PDF
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A6, A4
 from reportlab.platypus import SimpleDocTemplate, Table
 
@@ -18,6 +16,16 @@ import json
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from .models import Produit, Vente, LigneVente, Notification
+from django.shortcuts import render
+
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A6
+
+import os
+from django.conf import settings
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
+from .models import Vente
 
 # --- SÉCURITÉ ---
 def est_admin(user):
@@ -124,80 +132,90 @@ def get_produit_details(request, pk):
 
 
 @login_required
+@transaction.atomic
 def valider_vente(request):
-    # On accepte le POST pour traiter les données du panier
-    if request.method == "POST":
+    if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            nom_client = data.get('client', 'Client Anonyme')
             articles = data.get('articles', [])
+            nom_client = data.get('client', 'Client Anonyme')
 
             if not articles:
                 return JsonResponse({'success': False, 'message': 'Le panier est vide'})
 
-            with transaction.atomic():
-                # 1. Création de la vente globale
-                v = Vente.objects.create(
-                    nom_client=nom_client,
-                    utilisateur=request.user,
-                    total_general=0
+            # 1. Création de la vente en base de données
+            vente = Vente.objects.create(
+                nom_client=nom_client,
+                utilisateur=request.user,
+                total_general=0
+            )
+
+            total_vente = 0
+            for item in articles:
+                produit = Produit.objects.get(id=item['id'])
+                qte = int(item['qte'])
+                prix_u = float(item['prix'])
+                sous_total = prix_u * qte
+
+                # Créer la ligne de détail
+                LigneVente.objects.create(
+                    vente=vente,
+                    produit=produit,
+                    quantite=qte,
+                    prix_unitaire=prix_u,
+                    sous_total=sous_total
                 )
 
-                total_final = 0
-                for item in articles:
-                    p = get_object_or_404(Produit, pk=item['id'])
-                    q = int(item['qte'])
+                # Mise à jour du stock
+                produit.quantite -= qte
+                produit.save()
+                total_vente += sous_total
 
-                    if p.quantite < q:
-                        return JsonResponse({'success': False, 'message': f'Stock insuffisant pour {p.nom}'})
+            # 2. Sauvegarde du total final
+            vente.total_general = total_vente
+            vente.save()
 
-                    sous_total = p.prix * q
+            # --- LA NOUVEAUTÉ : GÉNÉRATION ET STOCKAGE DU REÇU ---
+            try:
+                # On appelle la fonction de création du fichier PDF
+                enregistrer_recu_physique(vente)
+            except Exception as e:
+                # On print l'erreur dans le terminal pour débugger sans bloquer la vente
+                print(f"Erreur lors de l'enregistrement du PDF : {e}")
 
-                    # 2. Création de la ligne de vente
-                    LigneVente.objects.create(
-                        vente=v,
-                        produit=p,
-                        quantite=q,
-                        prix_unitaire=p.prix,
-                        sous_total=sous_total
-                    )
-
-                    # 3. Mise à jour du stock
-                    p.quantite -= q
-                    p.save()
-
-                    # --- CORRECTION NOTIFICATION ---
-                    # On crée la notification sans le champ 'utilisateur'
-                    Notification.objects.create(
-                        message=f"Vente de {q} {p.nom} à {nom_client}"
-                    )
-
-                    total_final += sous_total
-
-                # 4. Enregistrement du total final
-                v.total_general = total_final
-                v.save()
-
-            return JsonResponse({'success': True, 'vente_id': v.id})
+            return JsonResponse({'success': True, 'vente_id': vente.id})
 
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)})
 
-    # Si ce n'est pas du POST, on renvoie une erreur claire
-    return JsonResponse({'success': False, 'message': 'Erreur : La requête doit être de type POST'})
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
 
 def succes_vente(request, vente_id):
     return render(request, 'gestion/recu_vente.html', {'vente': get_object_or_404(Vente, id=vente_id)})
 
+
+
 def generer_recu_pdf(request, vente_id):
-    v = get_object_or_404(Vente, id=vente_id)
-    response = HttpResponse(content_type='application/pdf')
-    p = canvas.Canvas(response, pagesize=A6)
-    p.drawString(20, 380, f"REÇU - {v.produit.nom}")
-    p.drawString(20, 310, f"Total: {v.prix_total} FCFA")
-    p.showPage()
-    p.save()
-    return response
+    # 1. On récupère la vente
+    vente = get_object_or_404(Vente, id=vente_id)
+
+    # 2. On définit le chemin où le fichier devrait être stocké
+    nom_fichier = f"recu_vente_{vente.id}.pdf"
+    chemin_pdf = os.path.join(settings.BASE_DIR, 'reçus', nom_fichier)
+
+    # 3. On vérifie si le fichier existe physiquement
+    if os.path.exists(chemin_pdf):
+        # Si le fichier existe, on le sert directement
+        return FileResponse(open(chemin_pdf, 'rb'), content_type='application/pdf')
+    else:
+        # Si le fichier n'existe pas (ex: ancienne vente), on peut soit lever une erreur 404
+        # Soit appeler la fonction de création pour le générer maintenant
+        try:
+            from .views import enregistrer_recu_physique  # Assure-toi que la fonction est accessible
+            nouveau_chemin = enregistrer_recu_physique(vente)
+            return FileResponse(open(nouveau_chemin, 'rb'), content_type='application/pdf')
+        except Exception:
+            raise Http404("Le reçu PDF n'a pas pu être trouvé ou généré.")
 
 # --- RAPPORTS & EXPORTS ---
 @login_required
@@ -271,3 +289,73 @@ def verifier_patron_inventaire(request):
     if request.method == 'POST' and authenticate(username=request.user.username, password=request.POST.get('password')):
         return redirect('liste_produits')
     return render(request, 'gestion/verif_password.html')
+  # Assure-toi que l'import est là
+
+
+def historique_ventes(request):
+    # On récupère toutes les ventes par date décroissante
+    ventes = Vente.objects.all().order_by('-date_vente')
+
+    # Récupération des filtres
+    nom_client = request.GET.get('nom_client')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+
+    # Application des filtres si remplis
+    if nom_client:
+        ventes = ventes.filter(nom_client__icontains=nom_client)
+
+    if date_debut and date_fin:
+        ventes = ventes.filter(date_vente__date__range=[date_debut, date_fin])
+
+    # Calcul du CA Total pour l'affichage
+    ca_total = ventes.aggregate(total=Sum('total_general'))['total'] or 0
+
+    return render(request, 'gestion/historique.html', {
+        'ventes': ventes,
+        'ca_total': ca_total,
+        'nom_client': nom_client
+    })
+
+
+def enregistrer_recu_physique(vente):
+    # 1. Définir le chemin du dossier (racine_du_projet/reçus/)
+    dossier_reçus = os.path.join(settings.BASE_DIR, 'reçus')
+
+    # Créer le dossier s'il n'existe pas encore
+    if not os.path.exists(dossier_reçus):
+        os.makedirs(dossier_reçus)
+
+    # 2. Nom du fichier basé sur l'ID de la vente
+    nom_fichier = f"recu_vente_{vente.id}.pdf"
+    chemin_complet = os.path.join(dossier_reçus, nom_fichier)
+
+    # 3. Génération du PDF avec ReportLab
+    c = canvas.Canvas(chemin_complet, pagesize=A6)
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(20, 380, "TICKET DE CAISSE")
+
+    c.setFont("Helvetica", 10)
+    c.drawString(20, 360, f"Client : {vente.nom_client}")
+    c.drawString(20, 345, f"Date : {vente.date_vente.strftime('%d/%m/%Y %H:%M')}")
+    c.drawString(20, 330, f"Vendu par : {vente.utilisateur.username}")
+
+    c.line(20, 320, 280, 320)
+
+    # Liste des articles
+    y = 300
+    for ligne in vente.lignes.all():
+        c.drawString(20, y, f"{ligne.produit.nom} x{ligne.quantite}")
+        c.drawRightString(280, y, f"{ligne.sous_total} FCFA")
+        y -= 15
+
+    c.line(20, y, 280, y)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(20, y - 20, "TOTAL GENERAL")
+    c.drawRightString(280, y - 20, f"{vente.total_general} FCFA")
+
+    c.showPage()
+    c.save()
+
+    return chemin_complet
+
