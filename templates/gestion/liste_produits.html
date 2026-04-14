@@ -122,9 +122,47 @@
                                         <a href="{% url 'modifier_produit' produit.id %}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{% url 'supprimer_produit' produit.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')">
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="confirmerSuppression('{% url 'supprimer_produit' produit.id %}', '{{ produit.nom }}')">
                                             <i class="fas fa-trash"></i>
-                                        </a>
+                                        </button>
+
+<script>
+function confirmerSuppression(url, nomProduit) {
+    Swal.fire({
+        title: 'Suppression',
+        text: "Voulez-vous vraiment supprimer " + nomProduit + " ?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // 1. On affiche le message de succès temporaire
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end', // En haut à droite
+                showConfirmButton: false,
+                timer: 2000, // Dure 2 secondes
+                timerProgressBar: true,
+            });
+
+            Toast.fire({
+                icon: 'success',
+                title: 'Produit supprimé avec succès !'
+            });
+
+            // 2. On attend la fin du message (2s) avant de rediriger
+            setTimeout(() => {
+                window.location.href = url;
+            }, 12000);
+        }
+    })
+}
+</script>
                                     </div>
                                 </td>
                             </tr>
