@@ -1,0 +1,129 @@
+{% extends 'base_auth.html' %}
+{% load static %}
+
+{% block title %}Inscription | Gestion de Stock{% endblock %}
+
+{% block content %}
+
+<div class="auth-container">
+    <div class="col-lg-5 col-md-7">
+        <div class="auth-card fade-in">
+            <!-- Header -->
+            <div class="auth-header">
+                <i class="fas fa-user-plus"></i>
+                <h1>INSCRIPTION</h1>
+                <p>Créez votre compte de gestion</p>
+            </div>
+            
+            <div class="card-body p-4">
+                {% if messages %}
+                    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+                        {% for message in messages %}
+                            {{ message }}
+                        {% endfor %}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">
+                            <i class="fas fa-user me-2"></i>Nom d'utilisateur
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.username.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                            <i class="fas fa-envelope me-2"></i>Adresse email
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.email.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Mot de passe
+                        </label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.password1.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Confirmer le mot de passe
+                        </label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.password2.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- hCaptcha -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-shield-alt me-2"></i>Vérification de sécurité
+                        </label>
+                        {{ form.captcha }}
+                        {% if form.captcha.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.captcha.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="text-muted d-block mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Cette vérification protège contre les robots
+                        </small>
+                    </div>
+                    
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary btn-pro btn-lg w-100">
+                            <i class="fas fa-user-plus me-2"></i>Créer mon compte
+                        </button>
+                    </div>
+                    
+                    <div class="text-center">
+                        <a href="{% url 'login' %}" class="text-decoration-none">
+                            <i class="fas fa-sign-in-alt me-2"></i>Déjà un compte ? <strong>Se connecter</strong>
+                        </a>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Informations supplémentaires -->
+            <div class="card-footer bg-light p-3">
+                <h6 class="fw-bold text-muted mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Informations importantes
+                </h6>
+                <ul class="small text-muted mb-0">
+                    <li class="mb-2">Le mot de passe doit contenir au moins 8 caractères</li>
+                    <li class="mb-2">Choisissez un nom d'utilisateur facile à mémoriser</li>
+                    <li class="mb-2">Une adresse email valide est requise</li>
+                    <li class="mb-0">hCaptcha protège votre inscription</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script hCaptcha -->
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+
+{% endblock %}

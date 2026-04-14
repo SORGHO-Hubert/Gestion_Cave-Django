@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+    <div class="card shadow" style="border: none; border-radius: 12px; overflow: hidden;">
+
+        <div class="card-header text-white" style="background: #1a252f; padding: 20px 25px; border: none;">
+            <h3 class="mb-0 fw-bold"><i class="fas fa-edit me-2 text-info"></i>Modifier le produit</h3>
+        </div>
+
+        <div class="card-body p-5">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    {{ form.as_p }}
+                </div>
+
+                <style>
+                    /* On force un design pro sur les inputs générés par Django */
+                    /* AJOUT de input[type=file] pour le style de l'image */
+                    input[type=text], input[type=number], input[type=email], input[type=file], textarea {
+                        width: 100%;
+                        padding: 12px;
+                        border-radius: 8px;
+                        border: 1px solid #dee2e6;
+                        background-color: #f8f9fa;
+                        margin-bottom: 5px;
+                    }
+                    p label {
+                        font-weight: 600;
+                        color: #1a252f;
+                        margin-bottom: 5px;
+                    }
+                </style>
+
+                <hr class="mb-4 opacity-10">
+
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'liste_produits' %}" class="btn btn-secondary me-3" style="border-radius: 8px; padding: 10px 20px;">
+                        Annuler
+                    </a>
+
+                    <button type="submit" class="btn btn-primary" style="background: #3498db; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600;">
+                        <i class="fas fa-save me-1"></i> Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

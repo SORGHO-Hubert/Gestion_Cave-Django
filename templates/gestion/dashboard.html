@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid px-4">
+    <div class="card border-0 shadow-sm mb-5" style="background: linear-gradient(135deg, #2c3e50 0%, #000000 100%); border-radius: 20px;">
+        <div class="card-body p-5 text-white">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-5 fw-bold mb-3">Tableau de Bord</h1>
+                    <p class="lead opacity-75 mb-4">Bienvenue, <span class="fw-bold text-warning">{{ user.username }}</span>. Voici l'état actuel de votre cave "Ma Cave Pro".</p>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'page_vente' %}" class="btn btn-warning btn-pro shadow-sm">
+                            <i class="fas fa-plus-circle me-1"></i> Nouvel Achat
+                        </a>
+                        <a href="{% url 'liste_produits' %}" class="btn btn-outline-light btn-pro">
+                            <i class="fas fa-boxes me-1"></i> Voir Inventaire
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center d-none d-md-block">
+                    <i class="fas fa-wine-bottle fa-10x opacity-25 text-warning"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid px-4 mt-4">
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0" style="background: #1a252f; border-radius: 15px; color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h6 class="text-uppercase mb-0" style="font-size: 0.75rem; opacity: 0.8;">Chiffre d'Affaires</h6>
+                        <div class="d-flex align-items-center">
+                            <button onclick="toggleCA()" class="btn btn-sm text-white border-0 p-0 me-2">
+                                <i class="fas fa-eye" id="eye-icon"></i>
+                            </button>
+                            <i class="fas fa-money-bill-wave text-success fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1" id="ca-amount">{{ total_ca }} FCFA</h3>
+                    <p class="mb-0" style="font-size: 0.8rem; color: #2ecc71;"><i class="fas fa-arrow-up"></i> Total des ventes</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 card-kpi" style="background-color: #7f8c8d; color: white; border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-uppercase small fw-bold opacity-75">Ventes Réalisées</span>
+                        <i class="fas fa-shopping-cart fa-2x text-warning"></i>
+                    </div>
+                    <h2 class="fw-bold mb-1">{{ nb_ventes|default:"0" }}</h2>
+                    <p class="small mb-0 text-warning opacity-75"><i class="fas fa-wine-glass-alt me-1"></i> Transactions totales</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 card-kpi" style="background-color: #c0392b; color: white; border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-uppercase small fw-bold opacity-75">Alertes Stock</span>
+                        <i class="fas fa-exclamation-triangle fa-2x text-white"></i>
+                    </div>
+                    <h2 class="fw-bold mb-1">{{ alertes|default:"0" }}</h2>
+                    <p class="small mb-0 text-white opacity-75"><i class="fas fa-box me-1"></i> Produits <= 5 unités</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-5" style="border-radius: 15px;">
+        <div class="card-header bg-white py-3 border-bottom-0">
+            <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-history me-2 text-muted"></i> Dernières Transactions</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 text-center">Date</th>
+                        <th>Nom du Client</th>
+                        <th>Produit</th>
+                        <th class="text-center">Quantite Vendu</th>
+                        <th class="pe-4 text-end">Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vente in dernieres_ventes %}
+                    <tr>
+                        <td class="text-center">{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
+                        <td>{{ vente.nom_client }}</td>
+                        <td class="fw-bold text-dark">{{ vente.produit.nom }}</td>
+                        <td class="text-center fw-bold">{{ vente.quantite }}</td>
+                        <td class="pe-4 fw-bold text-success text-end">{{ vente.prix_total }} FCFA</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fas fa-ghost fa-3x mb-3 opacity-25"></i><br>
+                            Aucune vente enregistrée pour le moment.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleCA() {
+    const caElement = document.getElementById('ca-amount');
+    const eyeIcon = document.getElementById('eye-icon');
+    // On utilise la variable total_ca ici aussi
+    const realValue = "{{ total_ca }} FCFA";
+
+    if (caElement.innerText.includes("****")) {
+        caElement.innerText = realValue;
+        eyeIcon.classList.replace('fa-eye-slash', 'fa-eye');
+    } else {
+        caElement.innerText = "**** FCFA";
+        eyeIcon.classList.replace('fa-eye', 'fa-eye-slash');
+    }
+}
+</script>
+{% endblock %}

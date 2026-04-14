@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%); border-radius: 20px;">
+        <div class="card-body p-4 text-white">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-6 fw-bold mb-3">
+                        <i class="fas fa-boxes me-3"></i>Inventaire des Produits
+                    </h1>
+                    <p class="lead opacity-75 mb-0">Gérez votre stock de produits. Ajoutez, modifiez ou supprimez des articles.</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'exporter_csv' %}" class="btn btn-outline-light btn-pro">
+                            <i class="fas fa-download me-2"></i> Export CSV
+                        </a>
+                        <a href="{% url 'ajouter_produit' %}" class="btn btn-warning btn-pro shadow-sm">
+                            <i class="fas fa-plus-circle me-2"></i> Ajouter Produit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-start-0" placeholder="Rechercher un produit..." value="{{ request.GET.search }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="categorie" class="form-select">
+                        <option value="">Toutes les catégories</option>
+                        {% for categorie in categories %}
+                            <option value="{{ categorie.id }}" {% if request.GET.categorie == categorie.id|stringformat:"s" %}selected{% endif %}>
+                                {{ categorie.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="statut" class="form-select">
+                        <option value="">Tous les statuts</option>
+                        <option value="OK" {% if request.GET.statut == "OK" %}selected{% endif %}>En stock</option>
+                        <option value="ALERT" {% if request.GET.statut == "ALERT" %}selected{% endif %}>Stock bas</option>
+                        <option value="RUPTURE" {% if request.GET.statut == "RUPTURE" %}selected{% endif %}>Rupture</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <div class="btn-group w-100" role="group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <a href="{% url 'liste_produits' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tableau des produits -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-list me-2 text-muted"></i>Liste des Produits
+                        <span class="badge bg-secondary ms-2">{{ produits.count }}</span>
+                    </h5>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Nom du Produit</th>
+                            <th>Catégorie</th>
+                            <th>Prix</th>
+                            <th>Quantité</th>
+                            <th>Statut</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produit in produits %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold">{{ produit.nom }}</div>
+                                {% if produit.description %}
+                                    <small class="text-muted">{{ produit.description|truncatechars:50 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if produit.categorie %}
+                                    <span class="badge bg-info">{{ produit.categorie.nom }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold">{{ produit.prix }} FCFA</td>
+                            <td>
+                                <span class="badge bg-{% if produit.quantite == 0 %}danger{% elif produit.quantite <= 5 %}warning{% else %}success{% endif %}">
+                                    {{ produit.quantite }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if produit.quantite == 0 %}
+                                    <span class="badge bg-danger">Rupture</span>
+                                {% elif produit.quantite <= 5 %}
+                                    <span class="badge bg-warning">Stock bas</span>
+                                {% else %}
+                                    <span class="badge bg-success">En stock</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'modifier_produit' produit.pk %}" class="btn btn-outline-primary" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'supprimer_produit' produit.pk %}" class="btn btn-outline-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-box-open fa-3x mb-3 opacity-25"></i><br>
+                                <h5>Aucun produit trouvé</h5>
+                                <p class="text-muted">
+                                    {% if request.GET.search %}
+                                        Essayez de modifier votre recherche ou <a href="{% url 'liste_produits' %}" class="text-primary">afficher tous les produits</a>
+                                    {% else %}
+                                        <a href="{% url 'ajouter_produit' %}" class="btn btn-primary btn-sm mt-2">
+                                            <i class="fas fa-plus me-2"></i>Ajouter votre premier produit
+                                        </a>
+                                    {% endif %}
+                                </p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

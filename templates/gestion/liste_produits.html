@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%); border-radius: 20px;">
+        <div class="card-body p-4 text-white">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-6 fw-bold mb-3">
+                        <i class="fas fa-boxes me-3"></i>Inventaire des Produits
+                    </h1>
+                    <p class="lead opacity-75 mb-0">Gérez votre stock de produits. Ajoutez, modifiez ou supprimez des articles.</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'ajouter_produit' %}" class="btn btn-outline-light btn-pro">
+                        <i class="fas fa-plus me-2"></i>Ajouter un produit
+                    </a>
+                    <hr>
+                    <a href="{% url 'exporter_csv' %}" class="btn btn-success btn-pro">
+                        <i class="fas fa-file-csv me-2"></i>Exporter CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Rechercher un produit..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="categorie" class="form-select">
+                        <option value="">Toutes les catégories</option>
+                        {% for categorie in categories %}
+                            <option value="{{ categorie.id }}" {% if request.GET.categorie == categorie.id|stringformat:"s" %}selected{% endif %}>
+                                {{ categorie.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="statut" class="form-select">
+                        <option value="">Tous les statuts</option>
+                        <option value="ok" {% if request.GET.statut == "ok" %}selected{% endif %}>En stock</option>
+                        <option value="alert" {% if request.GET.statut == "alert" %}selected{% endif %}>Stock bas</option>
+                        <option value="rupture" {% if request.GET.statut == "rupture" %}selected{% endif %}>Rupture</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-pro w-100">
+                        <i class="fas fa-search me-2"></i>Rechercher
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tableau des produits -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Image</th>
+                            <th>Nom</th>
+                            <th>Catégorie</th>
+                            <th>Prix</th>
+                            <th>Quantité</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produit in produits %}
+                            <tr>
+                                <td>
+                                    {% if produit.image %}
+                                        <img src="{{ produit.image.url }}" alt="{{ produit.nom }}" class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                            <i class="fas fa-image text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ produit.nom }}</strong>
+                                    {% if produit.description %}
+                                        <br><small class="text-muted">{{ produit.description|truncatechars:50 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if produit.categorie %}
+                                        <span class="badge bg-info">{{ produit.categorie.nom }}</span>
+                                    {% else %}
+                                        <span class="text-muted">Non catégorisé</span>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ produit.prix }} FCFA</strong></td>
+                                <td>
+                                    <span class="badge {% if produit.quantite <= produit.seuil_alerte %}bg-danger{% elif produit.quantite <= produit.seuil_alerte|add:produit.seuil_alerte %}bg-warning{% else %}bg-success{% endif %}">
+                                        {{ produit.quantite }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if produit.quantite == 0 %}
+                                        <span class="badge bg-danger">Rupture</span>
+                                    {% elif produit.quantite <= produit.seuil_alerte %}
+                                        <span class="badge bg-warning">Stock bas</span>
+                                    {% else %}
+                                        <span class="badge bg-success">En stock</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'modifier_produit' produit.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'supprimer_produit' produit.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="col-md-4 text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <a href="{% url 'ajouter_produit' %}" class="btn btn-outline-light btn-pro">
+                                                <i class="fas fa-plus me-2"></i>Ajouter un produit
+                                            </a>
+
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

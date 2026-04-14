@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); border-radius: 20px;">
+        <div class="card-body p-4 text-white">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-6 fw-bold mb-3">
+                        <i class="fas fa-plus-circle me-3"></i>Ajouter un Nouveau Produit
+                    </h1>
+                    <p class="lead opacity-75 mb-0">Remplissez les informations ci-dessous pour ajouter un nouveau produit à votre inventaire.</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'liste_produits' %}" class="btn btn-outline-light btn-pro">
+                        <i class="fas fa-arrow-left me-2"></i> Retour à l'inventaire
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-box me-2 text-muted"></i>Informations du Produit
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.nom.id_for_label }}" class="form-label fw-bold">
+                                    Nom du produit <span class="text-danger">*</span>
+                                </label>
+                                {{ form.nom }}
+                                {% if form.nom.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.nom.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.categorie.id_for_label }}" class="form-label fw-bold">
+                                    Catégorie
+                                </label>
+                                {{ form.categorie }}
+                                {% if form.categorie.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.categorie.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">
+                                    Description
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.description.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.prix.id_for_label }}" class="form-label fw-bold">
+                                    Prix (FCFA) <span class="text-danger">*</span>
+                                </label>
+                                {{ form.prix }}
+                                {% if form.prix.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.prix.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.quantite.id_for_label }}" class="form-label fw-bold">
+                                    Quantité en stock <span class="text-danger">*</span>
+                                </label>
+                                {{ form.quantite }}
+                                {% if form.quantite.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.quantite.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.seuil_alerte.id_for_label }}" class="form-label fw-bold">
+                                    Seuil d'alerte
+                                </label>
+                                {{ form.seuil_alerte }}
+                                <small class="text-muted d-block">Alerte lorsque le stock atteint ce niveau</small>
+                                {% if form.seuil_alerte.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.seuil_alerte.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="{{ form.image.id_for_label }}" class="form-label fw-bold">
+                                    Image du produit
+                                </label>
+                                {{ form.image }}
+                                <small class="text-muted d-block">Formats acceptés: JPG, PNG, GIF (Max: 5MB)</small>
+                                {% if form.image.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.image.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success btn-pro">
+                                        <i class="fas fa-save me-2"></i> Enregistrer le produit
+                                    </button>
+                                    <a href="{% url 'liste_produits' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i> Annuler
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Aide -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">
+                        <i class="fas fa-info-circle me-2 text-info"></i>Conseils
+                    </h6>
+                    <ul class="small text-muted">
+                        <li class="mb-2">Utilisez un nom descriptif pour facilement retrouver le produit</li>
+                        <li class="mb-2">Définissez un seuil d'alerte pour être notifié lorsque le stock est bas</li>
+                        <li class="mb-2">Ajoutez une image pour une meilleure identification visuelle</li>
+                        <li class="mb-2">Les champs marqués d'un * sont obligatoires</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Statistiques rapides -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">
+                        <i class="fas fa-chart-pie me-2 text-muted"></i>État actuel du stock
+                    </h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">Total produits:</span>
+                        <span class="badge bg-primary">{{ total_produits|default:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">Alertes actives:</span>
+                        <span class="badge bg-warning">{{ alertes_actives|default:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small">Ruptures:</span>
+                        <span class="badge bg-danger">{{ ruptures|default:0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

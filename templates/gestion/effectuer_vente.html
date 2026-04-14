@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid px-4 py-4" style="background-color: #f4f7f6;">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm" style="border-radius: 15px;">
+                <div class="card-header border-0 py-3" style="background: #1a252f; border-radius: 15px 15px 0 0;">
+                    <h5 class="text-white mb-0"><i class="fas fa-plus-circle me-2 text-info"></i>Nouvelle Ligne</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">NOM DU CLIENT</label>
+                        <input type="text" id="nom_client" class="form-control border-0 bg-light" placeholder="Client passage..." style="border-radius: 8px;">
+                    </div>
+                    <hr class="opacity-10">
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">PRODUIT</label>
+                        <select id="select-produit" class="form-select border-0 bg-light" style="border-radius: 8px;">
+                            <option value="">Choisir un article...</option>
+                            {% for p in produits %}
+                            <option value="{{ p.id }}" data-prix="{{ p.prix }}">{{ p.nom }} ({{ p.quantite }} en stock)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="small fw-bold text-muted">QUANTITÉ</label>
+                        <input type="number" id="input-qte" class="form-control border-0 bg-light" value="1" min="1">
+                    </div>
+                    <button type="button" onclick="ajouterAuPanier()" class="btn w-100 py-2 fw-bold" style="background: #12939a; color: white; border-radius: 10px;">
+                        AJOUTER AU TICKET
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0" style="color: #1a252f;">Ticket de Caisse</h5>
+                    <span id="date-ticket" class="badge bg-light text-muted p-2"></span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="small text-uppercase text-muted">
+                                <tr>
+                                    <th>Article</th>
+                                    <th>Prix</th>
+                                    <th class="text-center">Qté</th>
+                                    <th>Total</th>
+                                    <th class="text-end"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="corps-panier">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer border-0 p-4" style="background: #1a252f; border-radius: 0 0 15px 15px;">
+                    <div class="row align-items-center">
+                        <div class="col-sm-6">
+                            <span class="text-white-50 small d-block">NET À PAYER</span>
+                            <h2 class="text-info fw-bold mb-0"><span id="total-final">0</span> FCFA</h2>
+                        </div>
+                        <div class="col-sm-6 text-end">
+                            {% csrf_token %}
+                            <button type="button" onclick="validerVente()" class="btn btn-info btn-lg px-5 fw-bold shadow-sm" style="border-radius: 10px; color: #1a252f;">
+                                <i class="fas fa-check-double me-2"></i>VALIDER LA VENTE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let panier = [];
+
+// Fonction pour ajouter au tableau (Ticket)
+function ajouterAuPanier() {
+    const select = document.getElementById('select-produit');
+    const qteInput = document.getElementById('input-qte');
+
+    if (!select.value) {
+        alert("Veuillez choisir un produit");
+        return;
+    }
+
+    const item = {
+        id: select.value,
+        nom: select.options[select.selectedIndex].text.split('(')[0].trim(),
+        prix: parseFloat(select.options[select.selectedIndex].getAttribute('data-prix')),
+        qte: parseInt(qteInput.value)
+    };
+    item.total = item.prix * item.qte;
+
+    panier.push(item);
+
+    // Mise à jour visuelle du tableau
+    const corps = document.getElementById('corps-panier');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td class="fw-bold">${item.nom}</td>
+        <td>${item.prix} FCFA</td>
+        <td class="text-center">${item.qte}</td>
+        <td class="fw-bold text-info">${item.total} FCFA</td>
+        <td class="text-end"><button class="btn btn-sm text-danger" onclick="this.parentElement.parentElement.remove()"><i class="fas fa-trash"></i></button></td>
+    `;
+    corps.appendChild(tr);
+
+    // Mise à jour du total général
+    let totalG = 0;
+    panier.forEach(i => totalG += i.total);
+    document.getElementById('total-final').innerText = totalG;
+}
+
+// LA FONCTION QUI FAIT LA REDIRECTION
+function validerVente() {
+    console.log("Bouton cliqué !"); // Vérifie ça dans la console (F12)
+
+    const client = document.getElementById('nom_client').value;
+    if (panier.length === 0) { alert("Le panier est vide !"); return; }
+    if (!client) { alert("Entrez le nom du client !"); return; }
+
+    // Récupération du token de sécurité Django
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch('/valider-vente/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+            client: client,
+            articles: panier
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // REDIRECTION VERS LE REÇU
+            window.location.href = "/recu/" + data.vente_id + "/";
+        } else {
+            alert("Erreur serveur : " + data.message);
+        }
+    })
+    .catch(error => {
+        console.error("Erreur Fetch:", error);
+        alert("Impossible de joindre le serveur. Vérifiez l'URL dans urls.py.");
+    });
+}
+</script>
+{% endblock %}
